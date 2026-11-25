@@ -6,7 +6,6 @@ name: Release
 on:
   push:
     tags: ['v*']
-    branches: [ci/release] # TEMP-DRYRUN-TRIGGER
   workflow_dispatch:
 
 env:
