@@ -1,0 +1,216 @@
+name: Release
+
+# Push a tag like v0.1.0 to build every platform and publish a GitHub Release.
+# Run it by hand (Actions > Release > Run workflow) for a dry run: it builds and tests
+# everything and keeps the files as workflow artifacts, but creates no release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Check the version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: version
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
+          echo "Cargo.toml version: $version"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match version $version in Cargo.toml. Bump the version, commit, and tag that commit."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.platform }}
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux: static musl binaries (run on any distro), cross-built with zig.
+          - { platform: linux-x64, target: x86_64-unknown-linux-musl, os: ubuntu-latest, zig: true, run: true }
+          - { platform: linux-arm64, target: aarch64-unknown-linux-musl, os: ubuntu-latest, zig: true }
+          # Windows: the C runtime is linked in, so no Visual C++ redistributable is needed.
+          - { platform: windows-x64, target: x86_64-pc-windows-msvc, os: windows-latest, run: true }
+          - { platform: windows-arm64, target: aarch64-pc-windows-msvc, os: windows-latest }
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      RUSTFLAGS: ${{ contains(matrix.target, 'windows') && '-C target-feature=+crt-static' || '' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Install zig and cargo-zigbuild
+        if: matrix.zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.14.1
+      - if: matrix.zig
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild
+      - name: Build (zig)
+        if: matrix.zig
+        shell: bash
+        run: cargo zigbuild --release --locked --target ${{ matrix.target }}
+      - name: Build
+        if: ${{ !matrix.zig }}
+        shell: bash
+        run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Check the binary
+        shell: bash
+        run: |
+          bin=target/${{ matrix.target }}/release/harugate
+          [ -f "$bin.exe" ] && bin="$bin.exe"
+          ls -l "$bin"
+          file "$bin" || true
+          if [ "${{ matrix.run }}" = true ]; then "$bin" --version; fi
+      - name: Package
+        shell: bash
+        run: |
+          bin=target/${{ matrix.target }}/release/harugate
+          [ -f "$bin.exe" ] && bin="$bin.exe"
+          .github/scripts/package.sh "$VERSION" ${{ matrix.platform }} "$bin" dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: archive-${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error
+
+  build-macos:
+    name: Build macos (arm64, x64, universal)
+    needs: prepare
+    runs-on: macos-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      MACOSX_DEPLOYMENT_TARGET: '11.0'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - name: Build both architectures
+        run: |
+          cargo build --release --locked --target aarch64-apple-darwin
+          cargo build --release --locked --target x86_64-apple-darwin
+      - name: Make the universal binary
+        run: |
+          mkdir -p target/universal
+          lipo -create -output target/universal/harugate \
+            target/aarch64-apple-darwin/release/harugate \
+            target/x86_64-apple-darwin/release/harugate
+          # Ad-hoc signature (no developer identity): Apple silicon refuses unsigned code.
+          codesign --force --sign - target/universal/harugate
+          lipo -info target/universal/harugate
+          target/universal/harugate --version
+          ls -l target/universal/harugate
+      - name: Package
+        run: |
+          .github/scripts/package.sh "$VERSION" macos-arm64 target/aarch64-apple-darwin/release/harugate dist
+          .github/scripts/package.sh "$VERSION" macos-x64 target/x86_64-apple-darwin/release/harugate dist
+          .github/scripts/package.sh "$VERSION" macos-universal target/universal/harugate dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: archive-macos
+          path: dist/*
+          if-no-files-found: error
+
+  package:
+    name: Checksums
+    needs: [prepare, build, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: archive-*
+          path: dist
+          merge-multiple: true
+      - name: SHA256SUMS.txt
+        working-directory: dist
+        run: |
+          sha256sum -- * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          ls -l
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-files
+          path: dist/*
+          if-no-files-found: error
+
+  # Run the install scripts against the files we just built (not against GitHub), on the
+  # three systems they are written for.
+  test-install:
+    name: Install script (${{ matrix.os }})
+    needs: [prepare, package]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    env:
+      HARUGATE_VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-files
+          path: dist
+      - name: install.sh
+        if: runner.os != 'Windows'
+        run: |
+          export HARUGATE_DOWNLOAD_BASE="$PWD/dist" HARUGATE_INSTALL_DIR="$RUNNER_TEMP/bin"
+          sh install.sh
+          "$RUNNER_TEMP/bin/harugate" --version
+          # A damaged download must be refused.
+          echo tampered >> "$PWD/dist/harugate-$HARUGATE_VERSION-$([ "$RUNNER_OS" = macOS ] && echo macos-universal || echo linux-x64).tar.gz"
+          if sh install.sh; then echo "install.sh accepted a tampered archive" >&2; exit 1; fi
+      - name: install.ps1 (Windows PowerShell 5.1)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $env:HARUGATE_DOWNLOAD_BASE = "$PWD\dist"
+          $env:HARUGATE_INSTALL_DIR = "$env:RUNNER_TEMP\bin"
+          .\install.ps1
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & "$env:RUNNER_TEMP\bin\harugate.exe" --version
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+  publish:
+    name: Publish the release
+    if: github.ref_type == 'tag'
+    needs: [prepare, package, test-install]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-files
+          path: dist
+      - name: Create the release
+        run: |
+          .github/scripts/release-notes.sh "$VERSION" dist/SHA256SUMS.txt > notes.md
+          prerelease=""
+          case "$VERSION" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "harugate $GITHUB_REF_NAME" \
+            --notes-file notes.md --generate-notes \
+            --verify-tag $prerelease

@@ -65,6 +65,13 @@ async fn health(State(state): State<AppState>) -> (StatusCode, Json<Value>) {
     )
 }
 
+/// The listen address is taken by another program, most likely another harugate.
+#[derive(Debug, thiserror::Error)]
+#[error("can't listen on {addr}: the address is already in use")]
+pub struct PortInUse {
+    pub addr: SocketAddr,
+}
+
 /// Resolve where the config lives: `--config` if given, else the default path.
 /// Returns the path and whether it is the default (which `serve` creates if missing).
 pub fn resolve_config_path(explicit: Option<PathBuf>) -> Result<(PathBuf, bool)> {
@@ -102,9 +109,18 @@ pub async fn run(config_path: Option<PathBuf>, open_browser: bool) -> Result<()>
             config.listen
         );
     }
-    let listener = tokio::net::TcpListener::bind(config.listen)
-        .await
-        .with_context(|| format!("can't listen on {}", config.listen))?;
+    let listener = match tokio::net::TcpListener::bind(config.listen).await {
+        Ok(listener) => listener,
+        Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
+            return Err(PortInUse {
+                addr: config.listen,
+            }
+            .into());
+        }
+        Err(e) => {
+            return Err(anyhow::Error::new(e).context(format!("can't listen on {}", config.listen)));
+        }
+    };
     let addr = listener.local_addr()?;
     state.set_bound_addr(addr);
     tracing::info!(

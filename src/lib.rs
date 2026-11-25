@@ -12,6 +12,7 @@
 //! - [`api`]: the JSON API under `/api` that the web UI (and anything else local) uses.
 //! - [`ui`]: the embedded web UI at `/ui`, and the checks that protect it and `/api`.
 //! - [`server`]: `app(state) -> Router`, `serve`, `run`.
+//! - [`startup`]: the plain-language report when `serve` can't start (port in use, bad config).
 
 pub mod activity;
 pub mod api;
@@ -20,6 +21,7 @@ pub mod hosts;
 pub mod proxy;
 pub mod routing;
 pub mod server;
+pub mod startup;
 pub mod state;
 pub mod ui;
 

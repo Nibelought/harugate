@@ -2,7 +2,7 @@ use std::{io::IsTerminal, path::PathBuf};
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use harugate::{config, hosts, server, state};
+use harugate::{config, hosts, server, startup, state};
 
 /// harugate: local OpenRouter provider-routing proxy for Koharu.
 ///
@@ -42,9 +42,17 @@ async fn main() -> Result<()> {
     // pipes (stdin or stdout not a terminal) never open a browser, nor does an explicit
     // `serve` without `--open`.
     let interactive = std::io::stdin().is_terminal() && std::io::stdout().is_terminal();
+    let bare = cli.command.is_none();
     let command = cli.command.unwrap_or(Command::Serve { open: interactive });
     match command {
-        Command::Serve { open } => server::run(cli.config, open).await,
+        Command::Serve { open } => {
+            if let Err(err) = server::run(cli.config, open).await {
+                // A double-clicked Windows console closes at exit: wait so the message
+                // can be read. (macOS Terminal and shells keep the output on screen.)
+                startup::fail(&err, open, cfg!(windows) && bare && interactive)
+            }
+            Ok(())
+        }
         Command::Hosts { model } => {
             let (path, _) = server::resolve_config_path(cli.config)?;
             // The upstream comes from the config if there is one, else the default.
