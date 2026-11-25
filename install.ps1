@@ -111,16 +111,29 @@ function Install-Harugate {
         Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
     }
 
-    # 5. Add the folder to this user's PATH, if it is not there already.
-    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-    $entries = @()
-    if ($userPath) { $entries = $userPath.Split(';') | Where-Object { $_ } }
-    $trimmed = $installDir.TrimEnd('\')
-    $alreadyThere = $entries | Where-Object { $_.TrimEnd('\') -ieq $trimmed }
-    if (-not $alreadyThere) {
-        $newPath = (@($entries) + $installDir) -join ';'
-        [Environment]::SetEnvironmentVariable('Path', $newPath, 'User')
-        $pathChanged = $true
+    # 5. Add the folder to this user's PATH, if it is not there already. Read and write the
+    # registry value as stored (unexpanded, REG_EXPAND_SZ): [Environment]::SetEnvironmentVariable
+    # would expand every %VAR% in the user's other PATH entries and save them as plain text.
+    $envKey = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $true)
+    try {
+        $userPath = $envKey.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+        $entries = @()
+        if ($userPath) { $entries = $userPath.Split(';') | Where-Object { $_ } }
+        $trimmed = $installDir.TrimEnd('\')
+        $alreadyThere = $entries | Where-Object { [Environment]::ExpandEnvironmentVariables($_).TrimEnd('\') -ieq $trimmed }
+        if (-not $alreadyThere) {
+            $newPath = (@($entries) + $installDir) -join ';'
+            $envKey.SetValue('Path', $newPath, [Microsoft.Win32.RegistryValueKind]::ExpandString)
+            $pathChanged = $true
+        }
+    } finally {
+        $envKey.Close()
+    }
+    if ($pathChanged) {
+        # Tell Explorer the environment changed (so new windows see the PATH): setting and
+        # removing a throwaway user variable through .NET broadcasts WM_SETTINGCHANGE.
+        [Environment]::SetEnvironmentVariable('HARUGATE_PATH_REFRESH', '1', 'User')
+        [Environment]::SetEnvironmentVariable('HARUGATE_PATH_REFRESH', $null, 'User')
     }
     # Make it work in this window too.
     if (-not (($env:Path.Split(';') | Where-Object { $_.TrimEnd('\') -ieq $trimmed }))) {
