@@ -6,9 +6,8 @@ name: Release
 on:
   push:
     tags: ['v*']
-  workflow_dispatch:
-  push: # TEMP-DRYRUN-TRIGGER
     branches: [ci/release] # TEMP-DRYRUN-TRIGGER
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
