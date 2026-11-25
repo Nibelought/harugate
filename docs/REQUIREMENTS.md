@@ -111,6 +111,8 @@ by default, only a connect timeout.
 Windows: no unix-only code outside `cfg(unix)`, paths through `std::path` / `dirs`, and TLS
 that builds without OpenSSL, CMake or NASM (rustls with `ring`). CI runs fmt, clippy and the
 tests on all three.
+*Release builds (T12):* macOS (universal), Windows x64 and arm64, and Linux x64 and arm64 are all supported
+and published; the Linux binaries are static (musl), so they run on any distribution.
 
 **N7** Unit tests cover F3, F4 parsing, F7 and F8 parsing, offline, with fixtures. At least one
 integration test runs the proxy against a local mock upstream (non-stream and stream).

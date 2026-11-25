@@ -15,6 +15,68 @@ Koharu itself is **not** modified. The proxy is a standalone project. It ships w
 interface (`/ui`, served by the same binary) for choosing the routing and pins, so you don't need
 the command line or a text editor.
 
+## Install
+
+You don't need Rust. Download the file for your system from the
+[latest release](https://github.com/Nibelought/harugate/releases/latest) (`<version>` is the release number,
+e.g. `0.1.0`), unpack it, and run `harugate`:
+
+| System | Download | Rust target |
+|---|---|---|
+| **macOS**, Apple silicon and Intel | `harugate-<version>-macos-universal.tar.gz` | both `aarch64-apple-darwin` and `x86_64-apple-darwin` |
+| **Windows** 10/11, 64-bit | `harugate-<version>-windows-x64.zip` | `x86_64-pc-windows-msvc` |
+| Windows on ARM | `harugate-<version>-windows-arm64.zip` | `aarch64-pc-windows-msvc` |
+| **Linux** x86-64 | `harugate-<version>-linux-x64.tar.gz` | `x86_64-unknown-linux-musl` |
+| Linux ARM64 (Raspberry Pi 4/5, ARM servers) | `harugate-<version>-linux-arm64.tar.gz` | `aarch64-unknown-linux-musl` |
+
+Also published: `macos-arm64` and `macos-x64` (one architecture each; the universal file covers both) and
+`SHA256SUMS.txt`. The Linux builds are static: they run on any distribution. Each archive holds the
+program, this README, both licenses and `config.example.toml`.
+
+**One-line install** (downloads the right file, checks its SHA-256, puts it in your user folder; no
+administrator rights):
+
+```sh
+# macOS / Linux: installs to ~/.local/bin
+curl -fsSL https://raw.githubusercontent.com/Nibelought/harugate/main/install.sh | sh
+```
+
+```powershell
+# Windows PowerShell: installs to %LOCALAPPDATA%\Programs\harugate and adds it to your PATH
+irm https://raw.githubusercontent.com/Nibelought/harugate/main/install.ps1 | iex
+```
+
+Read them first if you like: [`install.sh`](install.sh) and [`install.ps1`](install.ps1) are short. A
+specific version: `curl -fsSL .../install.sh | sh -s -- 0.1.0`, or in PowerShell
+`$env:HARUGATE_VERSION = "0.1.0"` before the `irm` line. To uninstall, delete the `harugate` file (and, on
+Windows, the folder from your PATH). Your config stays where it is (see "Run").
+
+**First run:** double-click `harugate` (`harugate.exe`), or type `harugate` in a terminal. The proxy starts and
+your browser opens its page at <http://127.0.0.1:8787/ui>. Leave the window open while you use Koharu;
+closing it stops the proxy. Then follow "Set up Koharu" below. If the proxy is already running, a second
+start says so and opens the page of the first.
+
+**macOS says "can't be opened" or "Apple cannot check it":** the binaries are not signed with an Apple
+developer certificate. The one-line installer avoids the warning. For a file you downloaded in the browser,
+do either of these once:
+
+- System Settings → Privacy & Security → scroll down to the message about `harugate` → **Open Anyway**; or
+- in Terminal: `xattr -d com.apple.quarantine /path/to/harugate`.
+
+**Windows SmartScreen says "Windows protected your PC":** the program is not code-signed. Click
+**More info**, then **Run anyway**. (The installer script doesn't trigger it.)
+
+**Linux:** from the file manager, open a terminal in the folder and run `./harugate` (add `chmod +x harugate`
+if needed).
+
+**Build from source** instead (needs [Rust](https://rustup.rs) 1.88+):
+
+```sh
+cargo install --git https://github.com/Nibelought/harugate
+```
+
+More options are under "Build from source" in Usage.
+
 ## Folder map
 
 | Path | What it is |
@@ -27,6 +89,9 @@ the command line or a text editor.
 | `config.example.toml` | The proposed config format |
 | `ui/` | The web UI: one HTML, CSS and JS file, embedded in the binary |
 | `.github/workflows/ci.yml` | fmt, clippy and tests on Linux, macOS and Windows |
+| `.github/workflows/release.yml` | Builds the release archives for every platform and publishes a GitHub Release when a `v*` tag is pushed |
+| `.github/scripts/` | `package.sh` (makes one archive), `release-notes.sh` (the top of the release notes) |
+| `install.sh`, `install.ps1` | The one-line installers for macOS/Linux and Windows |
 | `reference/routing.rs` | **Tested** Rust from PR #1534: building the `provider` object, parsing the host list, explaining pin errors (6 unit tests) |
 | `reference/host-label.ts` | **Tested** labelling of hosts from the PR's UI (e.g. `DeepInfra (fp8, priority)`) |
 | `reference/fixtures/` | Sample endpoints reply and the 404 body OpenRouter returns for a pin that can't serve a request |
@@ -70,9 +135,10 @@ the command line or a text editor.
 
 ## Usage
 
-### Install
+### Build from source
 
-You need [Rust](https://rustup.rs) 1.88 or newer. No OpenSSL, CMake or NASM.
+(Most people want the downloads under "Install" at the top.) You need [Rust](https://rustup.rs) 1.88 or
+newer. No OpenSSL, CMake or NASM.
 
 | System | Steps |
 |---|---|
@@ -81,7 +147,8 @@ You need [Rust](https://rustup.rs) 1.88 or newer. No OpenSSL, CMake or NASM.
 | Windows | install Rust with rustup (it asks for the "Desktop development with C++" Build Tools; accept), then `cargo build --release` in PowerShell |
 
 The binary is `target/release/harugate` (`harugate.exe` in `target\release` on Windows).
-Copy it anywhere, or `cargo install --path .` to put it on your PATH. It is one file: the UI is inside.
+Copy it anywhere, or `cargo install --path .` (from a checkout) or `cargo install --git
+https://github.com/Nibelought/harugate` to put it on your PATH. It is one file: the UI is inside.
 
 ### Run
 
@@ -185,6 +252,26 @@ All under `/api`, JSON; errors are `{"error":{"message"}}`. Changing requests ne
 `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test` must be clean (CI runs
 them on Linux, macOS and Windows). Tests are offline: the upstream is a local mock. Live OpenRouter
 checks are task T10, run by hand.
+
+### Releasing
+
+For maintainers. The version in `Cargo.toml` is the release number, and the tag must match it.
+
+1. Bump `version` in `Cargo.toml` (`cargo build` updates `Cargo.lock`), commit and push to `main`; wait for CI.
+2. Tag that commit and push the tag:
+   ```sh
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+3. The **Release** workflow checks that the tag equals the `Cargo.toml` version, builds all platforms, tests
+   the install scripts against the fresh archives, and only then publishes the GitHub Release (archives,
+   `SHA256SUMS.txt`, install instructions, generated notes). A tag with a hyphen (`v0.2.0-rc1`) is marked a
+   pre-release.
+4. To rehearse without publishing: Actions → Release → *Run workflow*. It builds and tests everything and
+   keeps the files as workflow artifacts; no release is created.
+
+If a release build fails, fix it, delete the tag (`git push origin :v0.1.0`, `git tag -d v0.1.0`) and tag again.
+`.github/scripts/package.sh <version> <platform> <binary> <out-dir>` makes one archive locally.
 
 ## License
 

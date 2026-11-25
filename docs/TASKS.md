@@ -103,3 +103,24 @@ Done in this order: the config writer, the API, the guard, the page, the CLI, CI
       proxied request without any key; no API answer contains the key.
 - [ ] Not tested here: Windows (CI will), a real browser session by a person (the page was driven in
       headless Chrome against a mock upstream), and live OpenRouter (T10).
+
+## T12 – Releases (N6)
+Goal: a person with no Rust installed can get a working `harugate` on macOS, Windows or Linux.
+- [x] `[profile.release]`: LTO, one codegen unit, stripped (about 5.4 MB on macOS arm64).
+- [x] `.github/workflows/release.yml`: a `v*` tag builds and publishes a GitHub Release; a manual run
+      is a dry run (workflow artifacts only, no release). The tag must equal the `Cargo.toml` version.
+- [x] Targets: Linux x64 and arm64 (static musl, cross-built with zig), macOS arm64, x64 and a `lipo`
+      universal binary (ad-hoc signed), Windows x64 and arm64 (MSVC, C runtime linked in).
+- [x] Archives `harugate-<version>-<platform>.tar.gz` / `.zip` (platform: `macos-universal`, `macos-arm64`,
+      `macos-x64`, `linux-x64`, `linux-arm64`, `windows-x64`, `windows-arm64`), each with the binary,
+      README, both licenses and `config.example.toml`; plus `SHA256SUMS.txt`.
+- [x] `install.sh` (macOS/Linux) and `install.ps1` (Windows, PowerShell 5.1+): pick the archive, verify
+      SHA-256, install per user, clear the macOS quarantine flag, print next steps. The release workflow runs
+      both against the freshly built archives (and checks that `install.sh` refuses a tampered one).
+- [x] `harugate --version`. A failed start (port in use, bad config) prints a plain message; on Windows a
+      double-clicked window waits for Enter; a busy port says the UI is probably already running and, when the
+      UI would have opened anyway, opens it (`src/startup.rs`, 3 tests).
+- [x] README: Install section (downloads, one-liners, first run, Gatekeeper, SmartScreen, from source) and
+      "Releasing" for maintainers.
+- [ ] Not tested here: a first double-click on a real Windows desktop, and a published release (the first
+      `v*` tag does that).
