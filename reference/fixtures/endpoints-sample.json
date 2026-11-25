@@ -1,0 +1,52 @@
+{
+  "_note": "From the test the_hosts_are_read_from_an_endpoints_list in reference/routing.rs. PR filter result: deepinfra/fp4, novita. Proxy (no structured_outputs filter, T7): deepinfra/fp4, novita, tenstorrent/fp8, bare. The untagged row is always skipped.",
+  "data": {
+    "endpoints": [
+      {
+        "provider_name": "DeepInfra",
+        "tag": "deepinfra/fp4",
+        "quantization": "fp4",
+        "supported_parameters": [
+          "max_tokens",
+          "structured_outputs"
+        ]
+      },
+      {
+        "provider_name": "DeepInfra",
+        "tag": "deepinfra/fp4",
+        "quantization": "fp4",
+        "supported_parameters": [
+          "structured_outputs"
+        ]
+      },
+      {
+        "provider_name": "Novita",
+        "tag": "novita",
+        "quantization": "unknown",
+        "supported_parameters": [
+          "structured_outputs"
+        ]
+      },
+      {
+        "provider_name": "Nameless",
+        "supported_parameters": [
+          "structured_outputs"
+        ]
+      },
+      {
+        "provider_name": "Tenstorrent",
+        "tag": "tenstorrent/fp8",
+        "quantization": "fp8",
+        "supported_parameters": [
+          "max_tokens",
+          "response_format"
+        ]
+      },
+      {
+        "provider_name": "Bare",
+        "tag": "bare",
+        "quantization": "fp8"
+      }
+    ]
+  }
+}

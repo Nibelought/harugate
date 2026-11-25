@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Provider pins for Koharu</title>
+  <link rel="icon" type="image/svg+xml" href="/ui/favicon.svg">
+  <link rel="stylesheet" href="/ui/app.css">
+  <script src="/ui/app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="masthead">
+    <div class="wrap masthead-in">
+      <div>
+        <h1>Provider pins</h1>
+        <p class="lede">Choose which OpenRouter host serves your Koharu translations.</p>
+      </div>
+      <p class="version" id="version"></p>
+    </div>
+  </header>
+
+  <main id="main" class="wrap">
+    <p id="conn-note" class="conn-note" role="status" hidden></p>
+
+    <section id="loading" class="state-box" role="status">
+      <p>Loading settings from the proxy...</p>
+    </section>
+
+    <section id="load-error" class="state-box state-error" role="alert" hidden>
+      <h2>Can't reach the proxy</h2>
+      <p>This page is served by the proxy, so it is probably stopped or restarting. Start it again, then retry.</p>
+      <pre class="errtext" id="load-error-msg"></pre>
+      <button type="button" class="btn btn-primary" id="retry-btn">Try again</button>
+    </section>
+
+    <div id="app" hidden>
+      <div id="config-error" class="banner banner-error" role="alert" hidden>
+        <p class="banner-title">The config file on disk has an error</p>
+        <p>The proxy keeps running on the last settings that worked. Fix the file in the Raw file tab.</p>
+        <pre class="errtext" id="config-error-msg"></pre>
+        <button type="button" class="btn btn-small" id="goto-raw">Open the Raw file tab</button>
+      </div>
+
+      <div id="restart-notice" class="banner banner-warn" role="status" hidden>
+        <p class="banner-title">Restart needed</p>
+        <p id="restart-text">The listen address changed. It applies after you restart the proxy.</p>
+      </div>
+
+      <div id="status-warnings"></div>
+
+      <div class="top-grid">
+        <section class="panel" aria-labelledby="status-h">
+          <h2 id="status-h">Status</h2>
+          <dl class="facts">
+            <div><dt>Config file</dt><dd class="breakable"><code id="st-path"></code></dd></div>
+            <div><dt>Listening on</dt><dd><code id="st-listen"></code></dd></div>
+            <div><dt>Upstream</dt><dd class="breakable"><code id="st-upstream"></code></dd></div>
+            <div><dt>OPENROUTER_API_KEY</dt><dd id="st-key"></dd></div>
+            <div><dt>Default sort</dt><dd id="st-routing"></dd></div>
+            <div><dt>Pins</dt><dd id="st-pins"></dd></div>
+          </dl>
+        </section>
+
+        <section class="panel panel-tone" aria-labelledby="connect-h" id="connect">
+          <h2 id="connect-h">Connect Koharu</h2>
+          <ol class="steps">
+            <li>In Koharu, open <strong>Settings → Providers → OpenAI-compatible</strong>.</li>
+            <li>
+              Set <strong>Base URL</strong> to
+              <span class="copyrow">
+                <code class="urlbox" id="base-url"></code>
+                <button type="button" class="btn btn-small" id="copy-btn">Copy</button>
+                <span class="copy-note" id="copy-note" role="status"></span>
+              </span>
+            </li>
+            <li id="key-hint"></li>
+            <li>
+              Set the <strong>context window</strong>. OpenAI-compatible uses one window for all its models and
+              doesn't read it from the server. Use the smallest window among the models you use. If it is unset,
+              a conversation grows until the server cuts it off.
+            </li>
+            <li>Pick the model under <strong>Pipeline → Translator</strong>. It shows up as an OpenAI-compatible model.</li>
+          </ol>
+        </section>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Sections">
+        <button type="button" role="tab" id="tab-routing" aria-controls="panel-routing" aria-selected="true" data-tab="routing">Routing &amp; pins<span class="tab-dot" id="dot-routing" hidden><span aria-hidden="true"> *</span><span class="sr-only"> (unsaved changes)</span></span></button>
+        <button type="button" role="tab" id="tab-requests" aria-controls="panel-requests" aria-selected="false" tabindex="-1" data-tab="requests">Requests</button>
+        <button type="button" role="tab" id="tab-advanced" aria-controls="panel-advanced" aria-selected="false" tabindex="-1" data-tab="advanced">Advanced<span class="tab-dot" id="dot-advanced" hidden><span aria-hidden="true"> *</span><span class="sr-only"> (unsaved changes)</span></span></button>
+        <button type="button" role="tab" id="tab-raw" aria-controls="panel-raw" aria-selected="false" tabindex="-1" data-tab="raw">Raw file<span class="tab-dot" id="dot-raw" hidden><span aria-hidden="true"> *</span><span class="sr-only"> (unsaved changes)</span></span></button>
+      </div>
+
+      <!-- Routing and pins -->
+      <section id="panel-routing" class="tabpanel" role="tabpanel" aria-labelledby="tab-routing">
+        <h2>How requests are routed</h2>
+        <fieldset class="choices">
+          <legend>For models without a pin, sort hosts by</legend>
+          <div class="choice-grid">
+            <label class="choice"><input type="radio" name="routing" value="balanced"><span class="choice-body"><strong>Balanced</strong><span>OpenRouter's default choice.</span></span></label>
+            <label class="choice"><input type="radio" name="routing" value="price"><span class="choice-body"><strong>Price</strong><span>Cheapest host first.</span></span></label>
+            <label class="choice"><input type="radio" name="routing" value="throughput"><span class="choice-body"><strong>Throughput</strong><span>Fastest tokens per second.</span></span></label>
+            <label class="choice"><input type="radio" name="routing" value="latency"><span class="choice-body"><strong>Latency</strong><span>Quickest first token.</span></span></label>
+          </div>
+        </fieldset>
+
+        <div class="toggle">
+          <input type="checkbox" id="require-params">
+          <label for="require-params">Only use hosts that support every setting the request sends</label>
+          <p class="hint">Keeps requests from failing on hosts that ignore them.</p>
+        </div>
+
+        <h2 id="pins-h">Pinned models</h2>
+        <p>A pin sends one model to one host and ignores the sort above. If that host can't serve the request, it fails instead of moving to another host.</p>
+        <p class="note"><strong>Before you pin:</strong> Koharu's in-app agent sends tools with each request. If the pinned host doesn't support tools, every agent request fails with a 404 (the proxy explains why). Don't pin a host without tools support if you use the agent.</p>
+
+        <p id="pins-empty" class="empty" hidden>No pins yet. Every model uses the sort above.</p>
+        <div class="table-wrap" id="pins-table-wrap" tabindex="0" role="region" aria-labelledby="pins-h">
+          <table>
+            <caption class="sr-only">Pinned models and their host tags</caption>
+            <thead><tr><th scope="col">Model id</th><th scope="col">Tag</th><th scope="col">Actions</th></tr></thead>
+            <tbody id="pins-body"></tbody>
+          </table>
+        </div>
+
+        <form id="add-form" class="addform" novalidate>
+          <fieldset>
+            <legend>Add a pin</legend>
+            <div class="fields">
+              <div class="field">
+                <label for="add-model">Model id</label>
+                <input type="text" id="add-model" list="model-list" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="author/model-name">
+                <p class="hint" id="models-note">Looks like author/slug. Start typing to see suggestions.</p>
+              </div>
+              <div class="field">
+                <label for="add-tag">Tag</label>
+                <input type="text" id="add-tag" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="deepinfra/fp8">
+                <p class="hint">Use Find hosts to see the tags a model offers.</p>
+              </div>
+            </div>
+            <datalist id="model-list"></datalist>
+            <p class="field-error" id="add-error" role="alert"></p>
+            <div class="btnrow">
+              <button type="button" class="btn" id="find-btn">Find hosts</button>
+              <button type="submit" class="btn btn-primary">Add pin</button>
+            </div>
+          </fieldset>
+        </form>
+
+        <section id="hosts-panel" class="hosts" aria-labelledby="hosts-title" hidden>
+          <h3 id="hosts-title" tabindex="-1"></h3>
+          <p id="hosts-status" role="status"></p>
+          <p id="hosts-error" class="errtext" role="alert" hidden></p>
+          <div class="table-wrap" id="hosts-wrap" tabindex="0" role="region" aria-label="Hosts for this model" hidden>
+            <table>
+              <caption class="sr-only">Hosts OpenRouter lists for this model</caption>
+              <thead><tr><th scope="col">Host</th><th scope="col">Tag</th><th scope="col">Quantization</th><th scope="col">Tools</th><th scope="col">Structured output</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
+              <tbody id="hosts-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <!-- Requests -->
+      <section id="panel-requests" class="tabpanel" role="tabpanel" aria-labelledby="tab-requests" hidden>
+        <h2>Recent requests</h2>
+        <p id="req-intro">The last requests from Koharu, newest first. No keys, prompts or images are stored. The list is kept in memory only and clears when the proxy restarts.</p>
+        <p id="req-note" class="conn-note" hidden></p>
+        <p id="req-empty" class="empty" hidden>Nothing yet. Run a translation in Koharu and its requests will show up here.</p>
+        <div class="table-wrap" id="req-wrap" tabindex="0" role="region" aria-label="Recent requests" hidden>
+          <table>
+            <caption class="sr-only">Recent requests, newest first</caption>
+            <thead><tr><th scope="col">Time</th><th scope="col">Request</th><th scope="col">Routing</th><th scope="col">Status</th><th scope="col">Took</th></tr></thead>
+            <tbody id="req-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Advanced -->
+      <section id="panel-advanced" class="tabpanel" role="tabpanel" aria-labelledby="tab-advanced" hidden>
+        <h2>Advanced</h2>
+        <p>Most people never change these. The defaults are the safe choice.</p>
+        <div class="field">
+          <label for="in-upstream">Upstream address</label>
+          <input type="text" id="in-upstream" autocomplete="off" spellcheck="false" autocapitalize="off">
+          <p class="hint">Where the proxy forwards requests. Normal value: https://openrouter.ai/api/v1</p>
+          <div class="warn-block" id="warn-upstream" hidden>
+            <p><strong>Warning: this is not OpenRouter.</strong> The upstream receives your OpenRouter API key with every request. Only use an address you fully trust.</p>
+          </div>
+          <button type="button" class="btn btn-small" id="reset-upstream">Use the OpenRouter address</button>
+        </div>
+        <div class="field">
+          <label for="in-listen">Listen address <span class="tag-note">(takes effect after restart)</span></label>
+          <input type="text" id="in-listen" autocomplete="off" spellcheck="false" autocapitalize="off">
+          <p class="hint">Where the proxy accepts connections. Normal value: 127.0.0.1:8787, which only this computer can reach.</p>
+          <div class="warn-block" id="warn-listen" hidden>
+            <p><strong>Warning: this address is open to your network.</strong> Anyone who can reach it could use your OpenRouter key and spend your credit. Keep it on 127.0.0.1 unless you know why you need otherwise.</p>
+          </div>
+          <button type="button" class="btn btn-small" id="reset-listen">Use 127.0.0.1:8787</button>
+        </div>
+      </section>
+
+      <!-- Raw file -->
+      <section id="panel-raw" class="tabpanel" role="tabpanel" aria-labelledby="tab-raw" hidden>
+        <h2>Raw file</h2>
+        <p>The config file as it is on disk (TOML), at <code id="raw-path"></code>. Saving checks the whole file first. If it has a mistake, nothing is written and the file stays as it was.</p>
+        <p id="raw-loading" role="status" hidden>Loading the file...</p>
+        <div class="field">
+          <label for="raw-text">Config file contents</label>
+          <textarea id="raw-text" class="rawbox" spellcheck="false" autocomplete="off" autocapitalize="off" rows="18" wrap="off"></textarea>
+        </div>
+        <pre class="errtext" id="raw-error" role="alert" hidden></pre>
+        <div class="btnrow">
+          <button type="button" class="btn btn-primary" id="raw-save">Save file</button>
+          <button type="button" class="btn" id="raw-reload">Reload from disk</button>
+          <span class="chip" id="raw-chip" hidden>Unsaved changes</span>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="savebar" id="savebar" hidden>
+    <div class="wrap savebar-in">
+      <div class="fb" id="fb" hidden>
+        <div class="fb-text">
+          <div id="live-ok" role="status"></div>
+          <pre id="live-err" class="errtext" role="alert"></pre>
+        </div>
+        <button type="button" class="btn btn-small" id="fb-dismiss">Dismiss</button>
+      </div>
+      <div class="bar-row">
+        <p class="chips">
+          <span class="chip" id="chip-struct" hidden>Unsaved changes</span>
+          <span class="chip" id="chip-raw" hidden>Unsaved edits in the Raw file tab</span>
+        </p>
+        <div class="btnrow" id="bar-actions" hidden>
+          <button type="button" class="btn" id="discard-btn">Discard</button>
+          <button type="button" class="btn btn-primary" id="save-btn">Save changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="sr-only" id="sr-status" role="status" aria-live="polite"></p>
+
+  <dialog id="confirm-dialog" aria-labelledby="dlg-title" aria-describedby="dlg-body">
+    <div class="dlg-in">
+      <h2 id="dlg-title"></h2>
+      <div id="dlg-body"></div>
+      <div class="btnrow">
+        <button type="button" class="btn btn-primary" id="dlg-cancel" autofocus>Cancel</button>
+        <button type="button" class="btn btn-danger" id="dlg-confirm"></button>
+      </div>
+    </div>
+  </dialog>
+</body>
+</html>

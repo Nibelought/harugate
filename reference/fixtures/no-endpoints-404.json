@@ -1,0 +1,6 @@
+{
+  "error": {
+    "message": "No endpoints found that can handle the requested parameters.",
+    "code": 404
+  }
+}

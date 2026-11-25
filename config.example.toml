@@ -1,0 +1,16 @@
+# openrouter-proxy config (proposed format: T2)
+
+listen = "127.0.0.1:8787"                 # N1: loopback by default
+upstream = "https://openrouter.ai/api/v1"
+
+# Global sort for models with no pin: "price" | "throughput" | "latency".
+# Omit for Balanced (OpenRouter's default).
+routing = "price"
+
+# Only hosts that support every parameter the request sends (Koharu's default for OpenRouter).
+require_parameters = true
+
+# Model id (as Koharu sends it, OpenRouter's author/slug) -> endpoint tag.
+# Find tags with: openrouter-proxy hosts <author/slug>
+[pins]
+"deepseek/deepseek-v4.1-flash-1017" = "deepinfra/fp8"
