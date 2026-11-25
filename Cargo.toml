@@ -1,8 +1,14 @@
 [package]
-name = "openrouter-proxy"
+name = "harugate"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
+description = "Local OpenRouter provider-routing proxy for Koharu"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Nibelought/harugate"
+readme = "README.md"
+keywords = ["openrouter", "proxy", "koharu", "llm"]
+categories = ["command-line-utilities", "web-programming::http-server"]
 
 [dependencies]
 anyhow = "1.0.105"

@@ -20,7 +20,7 @@ pub const DEFAULT_LISTEN: &str = "127.0.0.1:8787";
 pub const DEFAULT_UPSTREAM: &str = "https://openrouter.ai/api/v1";
 
 /// The file written when the default config path doesn't exist yet.
-pub const DEFAULT_CONFIG_TOML: &str = r##"# openrouter-proxy config
+pub const DEFAULT_CONFIG_TOML: &str = r##"# harugate config
 
 # N1: loopback only by default. Binding elsewhere (e.g. "0.0.0.0:8787") exposes the proxy
 # to your network. Changing this needs a restart.
@@ -35,7 +35,7 @@ upstream = "https://openrouter.ai/api/v1"
 require_parameters = true
 
 # Model id (as Koharu sends it, OpenRouter's author/slug) -> endpoint tag.
-# Find tags with: openrouter-proxy hosts <author/slug>
+# Find tags with: harugate hosts <author/slug>
 [pins]
 # "deepseek/deepseek-v4.1-flash-1017" = "deepinfra/fp8"
 "##;
@@ -184,10 +184,10 @@ pub fn new_risks(current: &Config, new: &Config) -> Vec<String> {
     risks
 }
 
-/// `<config dir>/openrouter-proxy/config.toml` (via the `dirs` crate, so the right
+/// `<config dir>/harugate/config.toml` (via the `dirs` crate, so the right
 /// place on macOS, Linux and Windows), or `None` if the platform has no config dir.
 pub fn default_path() -> Option<PathBuf> {
-    dirs::config_dir().map(|dir| dir.join("openrouter-proxy").join("config.toml"))
+    dirs::config_dir().map(|dir| dir.join("harugate").join("config.toml"))
 }
 
 /// Write `text` to `path` through a temp file in the same directory and a rename, so a
@@ -602,7 +602,7 @@ mod tests {
     #[test]
     fn default_path_is_under_the_config_dir() {
         if let Some(path) = default_path() {
-            assert!(path.ends_with(Path::new("openrouter-proxy").join("config.toml")));
+            assert!(path.ends_with(Path::new("harugate").join("config.toml")));
         }
     }
 

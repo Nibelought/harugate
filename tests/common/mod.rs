@@ -16,7 +16,7 @@ use axum::{
     response::Response,
 };
 use bytes::Bytes;
-use openrouter_proxy::{config::ConfigStore, server, state::AppState};
+use harugate::{config::ConfigStore, server, state::AppState};
 use serde_json::{Value, json};
 use tokio::sync::Notify;
 
@@ -186,7 +186,7 @@ pub fn config_text(upstream: &Upstream, extra: &str) -> String {
 }
 
 pub fn client() -> reqwest::Client {
-    openrouter_proxy::state::install_crypto_provider();
+    harugate::state::install_crypto_provider();
     reqwest::Client::builder().no_proxy().build().unwrap()
 }
 

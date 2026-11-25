@@ -1,4 +1,6 @@
-//! The hosts OpenRouter lists for a model (`openrouter-proxy hosts <model>`).
+// Portions ported from Koharu (https://github.com/koharu-rs/koharu), Copyright (c) 2025-2026
+// Mayo Takanashi and Koharu contributors, used under its MIT or Apache-2.0 license (see README).
+//! The hosts OpenRouter lists for a model (`harugate hosts <model>`).
 //!
 //! Ported from `hosts()` / `hosts_in()` in reference/routing.rs and `label()` in
 //! reference/host-label.ts. Unlike the original, endpoints that don't list

@@ -1,4 +1,6 @@
-# openrouter-proxy
+# harugate
+
+A local OpenRouter provider-routing proxy for Koharu. The name: *Haru* (春, "spring") from Koharu, plus *gate*.
 
 A small local HTTP proxy that sits between Koharu and OpenRouter. It adds OpenRouter's
 `provider` routing object to each chat request: a global sort rule, and a provider pinned
@@ -41,7 +43,7 @@ the command line or a text editor.
   external fonts: it works offline and talks to nobody but your proxy). It is local-only and guarded
   against malicious web pages (DNS rebinding, CSRF, framing; see "The web UI and its safety" below
   and N8–N12).
-- **A bare launch opens the UI.** `openrouter-proxy` with no subcommand is `serve`, and also opens
+- **A bare launch opens the UI.** `harugate` with no subcommand is `serve`, and also opens
   the browser when started from a terminal or by double-click (stdin and stdout are terminals), so a
   double-click on Windows or macOS is enough. `serve` alone never opens a browser (scripts, services);
   `serve --open` always does.
@@ -57,7 +59,7 @@ the command line or a text editor.
   added on top of the same `axum::Router`. Targets macOS, Linux and Windows: no unix-only APIs outside `cfg(unix)`; CI runs on all three.
 - **F1, other paths: transparent passthrough under `/v1/*`** (any method, body streamed, query
   kept, same auth rules); anything outside `/v1` other than `/health` is a 404 and is never forwarded.
-- **Default config path:** `<config dir>/openrouter-proxy/config.toml` (macOS
+- **Default config path:** `<config dir>/harugate/config.toml` (macOS
   `~/Library/Application Support`, Linux `~/.config`, Windows `%APPDATA%`), created with defaults
   on first `serve`. An explicit `--config` path must exist.
 - **Hot reload:** the config file is re-read on every request (it is tiny) and compared with the last
@@ -78,18 +80,18 @@ You need [Rust](https://rustup.rs) 1.88 or newer. No OpenSSL, CMake or NASM.
 | Linux | a C compiler (`sudo apt install build-essential` or your distro's equivalent), then `cargo build --release` |
 | Windows | install Rust with rustup (it asks for the "Desktop development with C++" Build Tools; accept), then `cargo build --release` in PowerShell |
 
-The binary is `target/release/openrouter-proxy` (`openrouter-proxy.exe` in `target\release` on Windows).
+The binary is `target/release/harugate` (`harugate.exe` in `target\release` on Windows).
 Copy it anywhere, or `cargo install --path .` to put it on your PATH. It is one file: the UI is inside.
 
 ### Run
 
-- **Double-click** the binary, or run `openrouter-proxy` in a terminal. The proxy starts and your browser
+- **Double-click** the binary, or run `harugate` in a terminal. The proxy starts and your browser
   opens the UI at <http://127.0.0.1:8787/ui>. Leave the window open: closing it stops the proxy.
-- `openrouter-proxy serve --open` does the same explicitly; `openrouter-proxy serve` starts it without
+- `harugate serve --open` does the same explicitly; `harugate serve` starts it without
   opening a browser (the UI URL is in the log: `web UI: http://127.0.0.1:8787/ui`).
 - Stop with Ctrl-C.
 
-The config file is created on first run at `<your config dir>/openrouter-proxy/config.toml`
+The config file is created on first run at `<your config dir>/harugate/config.toml`
 (macOS `~/Library/Application Support`, Linux `~/.config`, Windows `%APPDATA%`). Use another file
 with `--config <path>` (it must exist). The file's path is shown in the UI.
 
@@ -127,7 +129,7 @@ In Koharu: Settings → Providers → **OpenAI-compatible**.
 ### Find and pin a tag from the command line
 
 ```
-openrouter-proxy hosts deepseek/deepseek-v4.1-flash-1017
+harugate hosts deepseek/deepseek-v4.1-flash-1017
 ```
 
 prints one line per host: tag, label, quantization, `tools=…`, `structured_outputs=…`. Put the tag in
@@ -183,3 +185,11 @@ All under `/api`, JSON; errors are `{"error":{"message"}}`. Changing requests ne
 `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test` must be clean (CI runs
 them on Linux, macOS and Windows). Tests are offline: the upstream is a local mock. Live OpenRouter
 checks are task T10, run by hand.
+
+## License
+
+harugate is dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
+
+Parts of `src/routing.rs`, `src/hosts.rs` and the files in `reference/` are ported from Koharu
+(https://github.com/koharu-rs/koharu), Copyright (c) 2025-2026 Mayo Takanashi and Koharu contributors,
+used under its MIT/Apache-2.0 license.

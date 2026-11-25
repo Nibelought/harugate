@@ -1,4 +1,4 @@
-# Working in openrouter-proxy
+# Working in harugate
 
 Scope: only this folder. Do not edit `../koharu`; it is a read-only reference for checking
 what Koharu sends (see docs/KOHARU-CONTRACT.md for the relevant file paths).

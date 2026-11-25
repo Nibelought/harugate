@@ -415,10 +415,9 @@ async fn an_unreachable_upstream_is_a_502_in_the_openrouter_shape() {
 #[tokio::test]
 async fn the_hosts_listing_reads_the_endpoints_of_a_model() {
     let up = spawn_upstream().await;
-    let hosts =
-        openrouter_proxy::hosts::hosts(&client(), &up.url(), Some("sk-test"), "z-ai/glm-5.3-flash")
-            .await
-            .unwrap();
+    let hosts = harugate::hosts::hosts(&client(), &up.url(), Some("sk-test"), "z-ai/glm-5.3-flash")
+        .await
+        .unwrap();
     assert_eq!(
         hosts.iter().map(|h| h.tag.as_str()).collect::<Vec<_>>(),
         ["bare", "deepinfra/fp4", "novita", "tenstorrent/fp8"]
@@ -427,7 +426,7 @@ async fn the_hosts_listing_reads_the_endpoints_of_a_model() {
     assert_eq!(got.uri, "/api/v1/models/z-ai/glm-5.3-flash/endpoints");
     assert_eq!(got.headers["authorization"], "Bearer sk-test");
     assert!(
-        openrouter_proxy::hosts::hosts(&client(), &up.url(), None, "no-slash")
+        harugate::hosts::hosts(&client(), &up.url(), None, "no-slash")
             .await
             .is_err()
     );

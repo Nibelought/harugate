@@ -1,4 +1,4 @@
-/* Provider pins: control panel for openrouter-proxy. Vanilla JS, no dependencies.
+/* Provider pins: control panel for harugate. Vanilla JS, no dependencies.
    All text from the API is written with textContent, never innerHTML. */
 (function () {
   'use strict';

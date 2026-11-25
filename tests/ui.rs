@@ -940,7 +940,7 @@ async fn the_ring_holds_the_last_hundred() {
             "GET",
             "/v1/models",
             None,
-            &openrouter_proxy::routing::Applied::Untouched,
+            &harugate::routing::Applied::Untouched,
             200,
             1,
         );

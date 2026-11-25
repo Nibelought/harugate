@@ -2,13 +2,15 @@ use std::{io::IsTerminal, path::PathBuf};
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use openrouter_proxy::{config, hosts, server, state};
+use harugate::{config, hosts, server, state};
 
-/// A local proxy that adds OpenRouter's `provider` routing object to chat requests.
+/// harugate: local OpenRouter provider-routing proxy for Koharu.
+///
+/// It adds OpenRouter's `provider` routing object to chat requests.
 #[derive(Parser)]
 #[command(version, about)]
 struct Cli {
-    /// Config file (default: <your config dir>/openrouter-proxy/config.toml, created on
+    /// Config file (default: <your config dir>/harugate/config.toml, created on
     /// first `serve`).
     #[arg(long, global = true, value_name = "PATH")]
     config: Option<PathBuf>,
@@ -33,7 +35,7 @@ enum Command {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    openrouter_proxy::init_logging();
+    harugate::init_logging();
     let cli = Cli::parse();
     // No subcommand is `serve`. Started by double-clicking (or typed bare in a terminal),
     // it also opens the web UI, so nobody needs the command line; scripts, services and

@@ -1,4 +1,4 @@
-# openrouter-proxy config (proposed format: T2)
+# harugate config (proposed format: T2)
 
 listen = "127.0.0.1:8787"                 # N1: loopback by default
 upstream = "https://openrouter.ai/api/v1"
@@ -11,6 +11,6 @@ routing = "price"
 require_parameters = true
 
 # Model id (as Koharu sends it, OpenRouter's author/slug) -> endpoint tag.
-# Find tags with: openrouter-proxy hosts <author/slug>
+# Find tags with: harugate hosts <author/slug>
 [pins]
 "deepseek/deepseek-v4.1-flash-1017" = "deepinfra/fp8"

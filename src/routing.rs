@@ -1,3 +1,5 @@
+// Portions ported from Koharu (https://github.com/koharu-rs/koharu), Copyright (c) 2025-2026
+// Mayo Takanashi and Koharu contributors, used under its MIT or Apache-2.0 license (see README).
 //! Which upstream host OpenRouter sends a request to: its `provider` request
 //! object, built from the global routing rule and the host pinned for one model.
 //!

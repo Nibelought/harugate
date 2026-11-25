@@ -1,4 +1,4 @@
-//! openrouter-proxy: a local HTTP proxy that adds OpenRouter's `provider` routing object
+//! harugate: a local HTTP proxy that adds OpenRouter's `provider` routing object
 //! to chat requests (a global sort rule, and a provider pinned per model).
 //!
 //! Library plus a thin binary: `main.rs` only parses the command line and calls in.

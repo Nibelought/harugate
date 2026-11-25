@@ -54,7 +54,7 @@ message made clearer, e.g.:
 `OpenRouter provider \`T\`, pinned for model \`M\` in <config path>, can't serve this request (OpenRouter: <original message>)`.
 - Port of `explained()` in reference/routing.rs. Other errors stay untouched.
 
-**F8 – Host listing (CLI).** `openrouter-proxy hosts <author/slug>` prints the endpoints
+**F8 – Host listing (CLI).** `harugate hosts <author/slug>` prints the endpoints
 OpenRouter lists for a model (`GET {upstream}/models/{author}/{slug}/endpoints`), one per
 line: tag, label (reference/host-label.ts logic), quantization, and whether it lists
 `tools` / `structured_outputs`. This is how you find a tag to pin.
